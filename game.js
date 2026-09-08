@@ -274,8 +274,10 @@ function tapAt(rawX, rawY) {
       SFX.tap();
       return;
     }
-    SFX.start();
-    startNewRun();
+    /* 只有点击「开始游戏」按钮才开局(开局音效由 startLevel 内统一播放) */
+    if (hit === 'start') {
+      startNewRun();
+    }
     return;
   }
 
@@ -399,6 +401,9 @@ function update(dt) {
 function render() {
   var t = Core.now();
   var ctx = Core.ctx;
+
+  /* 每帧强制复位基准变换矩阵(dpr 缩放),防止任何模块意外改 transform 后持续泄漏 */
+  ctx.setTransform(Core.dpr, 0, 0, Core.dpr, 0, 0);
 
   ctx.save();
   /* 震动位移 */

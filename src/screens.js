@@ -15,6 +15,7 @@
   /* 菜单交互区域(绘制时更新) */
   var ui = {
     sound: { x: 0, y: 0, r: 0 },
+    start: { x: 0, y: 0, w: 0, h: 0 },
     groups: { speed: [], density: [], path: [] }
   };
 
@@ -163,6 +164,7 @@
     y += R(28) * u;
     var btnW = W - R(96), btnH = BTN * u;
     var bx = R(48), by = y;
+    ui.start.x = bx; ui.start.y = by; ui.start.w = btnW; ui.start.h = btnH;
     var pulseB = 0.5 + 0.5 * Math.sin(t * 3);
     var ctx = Core.ctx;
     ctx.save();
@@ -176,7 +178,7 @@
     Core.drawText('▶  开 始 游 戏  ◀', W / 2, by + btnH / 2, R(19), '#ffffff', 'center');
   };
 
-  /* 菜单点击命中:返回 'sound' | {type:'speed'|'density'|'path', index} | null(其余区域即开始游戏) */
+  /* 菜单点击命中:返回 'sound' | {type:'speed'|'density'|'path', index} | 'start' | null(其余区域不响应) */
   Screens.menuHit = function (x, y) {
     var dx = x - ui.sound.x, dy = y - ui.sound.y;
     if (dx * dx + dy * dy < ui.sound.r * ui.sound.r) return 'sound';
@@ -190,6 +192,10 @@
           return { type: keys[k], index: i };
         }
       }
+    }
+    var st = ui.start;
+    if (st && x >= st.x - R(4) && x <= st.x + st.w + R(4) && y >= st.y - R(6) && y <= st.y + st.h + R(6)) {
+      return 'start';
     }
     return null;
   };

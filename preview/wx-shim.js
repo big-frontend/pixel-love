@@ -37,11 +37,10 @@
 
   function applyCanvasSize(cv) {
     var f = fit();
-    var cssScale = f.cssW / DESIGN_W;
     cv.style.width = f.cssW + 'px';
     cv.style.height = f.cssH + 'px';
-    // 返回的 pixelRatio 需同时包含设备像素比与 CSS 缩放,保证逻辑坐标 390x844
-    return (window.devicePixelRatio || 1) * cssScale;
+    /* 只负责 CSS 尺寸适配窗口,不再把 CSS 缩放混进像素比。
+       画布缓冲固定为 390x844 × devicePixelRatio,由 CSS 完成整体适配。 */
   }
 
   /* ---------- 触摸/鼠标事件 → wx 触控事件 ---------- */
@@ -130,12 +129,10 @@
       return off;
     },
     getSystemInfoSync: function () {
-      var f = fit();
-      var pr = applyCanvasSize(mainCanvas || document.getElementById('game'));
       return {
         windowWidth: DESIGN_W,
         windowHeight: DESIGN_H,
-        pixelRatio: pr,
+        pixelRatio: (window.devicePixelRatio || 1),
         statusBarHeight: 0,
         safeArea: { top: 0, left: 0, right: DESIGN_W, bottom: DESIGN_H, width: DESIGN_W, height: DESIGN_H },
         platform: 'web-preview'
@@ -176,13 +173,9 @@
       applyCanvasSize(mainCanvas);
     }
     bindInput();
-    /* 窗口尺寸变化时同步画布 */
+    /* 窗口尺寸变化时只同步 CSS 尺寸,绝不重置画布缓冲 */
     window.addEventListener('resize', function () {
       applyCanvasSize(mainCanvas);
-      var cv = mainCanvas;
-      var sys2 = window.wx.getSystemInfoSync();
-      cv.width = Math.round(sys2.windowWidth * sys2.pixelRatio);
-      cv.height = Math.round(sys2.windowHeight * sys2.pixelRatio);
     });
   }
 
