@@ -19,11 +19,13 @@
     groups: { speed: [], density: [], path: [] }
   };
 
-  /* 暂停面板交互区 */
-  var uiP = {
-    resume: { x: 0, y: 0, w: 0, h: 0 },
+  /* 过关/结算面板共用交互区(三档选择器 + 按钮) */
+  var uiO = {
+    btn: { x: 0, y: 0, w: 0, h: 0 },
     groups: { speed: [], density: [], path: [] }
   };
+  /* 暴露 uiO 用于测试与外部观察(浏览器预览可见) */
+  if (typeof window !== 'undefined') window.__SCREENS_UI__ = { uiO: uiO };
 
   /* ---------- 小工具 ---------- */
   function drawSoundBtn(t, soundOn) {
@@ -206,91 +208,11 @@
     return null;
   };
 
-  /* ---------- 暂停面板 ---------- */
-  Screens.paused = function (t, opt) {
-    var W = Core.W, H = Core.H;
-    var speedIdx = opt.speedIdx, densityIdx = opt.densityIdx, pathIdx = opt.pathIdx;
-
-    /* 半透明黑色遮罩(让背后游戏画面微微透出,但很暗) */
-    var ctx = Core.ctx;
-    ctx.fillStyle = 'rgba(10,4,26,0.78)';
-    ctx.fillRect(0, 0, W, H);
-
-    /* 标题 */
-    var head = R(56), ROW = R(54), PICK = R(34), BTN = R(52);
-    var top = H * 0.14, bottom = H - R(40);
-    var avail = bottom - top;
-    var total = head + 3 * (ROW + R(4)) + R(16) + PICK + R(24) + BTN;
-    var u = Math.min(1, avail / total);
-    var y = top + Math.max(0, (avail - total * u) / 2);
-
-    Core.drawTextGlow('已 暂 停', W / 2, y + head * u * 0.55, R(30), COL.text,
-      Core.hexA(COL.pink, 0.55), 'center');
-
-    /* 三档难度(沿用菜单的 drawPicker,只是位置从 y 开始) */
-    y += head * u + R(6);
-    var rows = [
-      {
-        key: 'speed', list: Config.SPEEDS, idx: speedIdx,
-        label: '下落速度 · 当前「' + Config.SPEEDS[speedIdx].name + ' ×' + Config.SPEEDS[speedIdx].mul.toFixed(2) + '」'
-      },
-      {
-        key: 'density', list: Config.DENSITY, idx: densityIdx,
-        label: '心的数量 · 当前「' + Config.DENSITY[densityIdx].name + '」单侧最多 ' + Config.DENSITY[densityIdx].lane + ' 个'
-      },
-      {
-        key: 'path', list: Config.PATHS, idx: pathIdx,
-        label: '移动轨迹 · 当前「' + Config.PATHS[pathIdx].name + '」' + Config.PATHS[pathIdx].desc
-      }
-    ];
-    for (var r = 0; r < rows.length; r++) {
-      var row = rows[r];
-      Core.drawText(row.label, W / 2, y, R(12), 'rgba(255,255,255,0.6)', 'center', false);
-      drawPicker(row.list, row.idx, y + R(18) * u, uiP.groups[row.key], PICK * u);
-      y += ROW * u;
-    }
-    y += (R(18) + PICK) * u - ROW * u;
-
-    /* 继续游戏按钮 */
-    y += R(28) * u;
-    var btnW = W - R(120), btnH = BTN * u;
-    var bx = R(60), by = y;
-    uiP.resume.x = bx; uiP.resume.y = by; uiP.resume.w = btnW; uiP.resume.h = btnH;
-    var pulseB = 0.5 + 0.5 * Math.sin(t * 3);
-    ctx.save();
-    ctx.globalAlpha = 0.5 + 0.3 * pulseB;
-    Core.drawGlow(W / 2, by + btnH / 2, R(110), COL.pink, 0.5);
-    ctx.restore();
-    var bg = ctx.createLinearGradient(bx, by, bx + btnW, by + btnH);
-    bg.addColorStop(0, Core.hexA(COL.pink, 0.9));
-    bg.addColorStop(1, Core.hexA('#c07fff', 0.9));
-    Core.panel(bx, by, btnW, btnH, R(24), bg, 'rgba(255,255,255,0.55)');
-    Core.drawText('▶  继 续 游 戏  ◀', W / 2, by + btnH / 2, R(19), '#ffffff', 'center');
-  };
-
-  /* 暂停面板命中:返回 'resume' | {type:'speed'|'density'|'path', index} | null */
-  Screens.pauseHit = function (x, y) {
-    var keys = ['speed', 'density', 'path'];
-    for (var k = 0; k < keys.length; k++) {
-      var list = uiP.groups[keys[k]];
-      for (var i = 0; i < list.length; i++) {
-        var s = list[i];
-        if (!s) continue;
-        if (x >= s.x - R(4) && x <= s.x + s.w + R(4) && y >= s.y - R(6) && y <= s.y + s.h + R(6)) {
-          return { type: keys[k], index: i };
-        }
-      }
-    }
-    var rs = uiP.resume;
-    if (rs && x >= rs.x - R(4) && x <= rs.x + rs.w + R(4) && y >= rs.y - R(6) && y <= rs.y + rs.h + R(6)) {
-      return 'resume';
-    }
-    return null;
-  };
-
   /* ---------- 过关面板 ---------- */
-  Screens.clear = function (t, g) {
+  Screens.clear = function (t, opt) {
     var ctx = Core.ctx, W = Core.W, H = Core.H;
+    var g = opt.g;
+    var speedIdx = opt.speedIdx, densityIdx = opt.densityIdx, pathIdx = opt.pathIdx;
     var e = Core.clamp((Core.now() - g.overAt) / 0.5, 0, 1);
     var sc = 0.8 + 0.2 * Core.easeOutBack(e);
     ctx.save();
@@ -299,7 +221,8 @@
     ctx.scale(sc, sc);
     ctx.translate(-W / 2, -H * 0.46);
 
-    var pw = W - R(56), ph = R(250), px = R(28), py = H * 0.46 - ph / 2;
+    /* 面板扩高以容纳三档选择器 + 按钮:250 → 410 */
+    var pw = W - R(56), ph = R(410), px = R(28), py = H * 0.46 - ph / 2;
     Core.panel(px, py, pw, ph, R(22), 'rgba(24,10,52,0.86)', Core.hexA(g.lev.theme.accent, 0.65));
 
     Core.drawGlow(W / 2, py + R(46), R(70), COL.gold, 0.5);
@@ -316,28 +239,86 @@
     }
 
     Core.drawText('累计得分 ' + g.score + ' · 剩余爱心 ' + g.love, W / 2, py + R(166), R(16), COL.text, 'center', false);
-    Core.drawText('通关奖励:爱心 +1,继续出发', W / 2, py + R(196), R(13), COL.dim, 'center', false);
-    ctx.restore();
+    Core.drawText('通关奖励:爱心 +1,继续出发', W / 2, py + R(192), R(13), COL.dim, 'center', false);
 
-    var blink = 0.5 + 0.5 * Math.sin(t * 4);
-    ctx.globalAlpha = 0.45 + 0.55 * blink;
-    Core.drawTextGlow('▶ 点击进入第 ' + (g.levelIdx + 2) + ' 关 ◀', W / 2, py + ph + R(40), R(19), COL.pinkHot, Core.hexA(COL.pink, 0.4), 'center');
-    ctx.globalAlpha = 1;
+    /* ---------- 三档难度(嵌入面板内) ---------- */
+    var rows = [
+      {
+        key: 'speed', list: Config.SPEEDS, idx: speedIdx,
+        label: '速度 ' + Config.SPEEDS[speedIdx].name + ' ×' + Config.SPEEDS[speedIdx].mul.toFixed(2)
+      },
+      {
+        key: 'density', list: Config.DENSITY, idx: densityIdx,
+        label: '数量 ' + Config.DENSITY[densityIdx].name + ' · 单侧 ' + Config.DENSITY[densityIdx].lane
+      },
+      {
+        key: 'path', list: Config.PATHS, idx: pathIdx,
+        label: '轨迹 ' + Config.PATHS[pathIdx].name
+      }
+    ];
+    var yy = py + R(216);
+    var ROW = R(38), PICK = R(24);
+    for (var r = 0; r < rows.length; r++) {
+      var row = rows[r];
+      Core.drawText(row.label, W / 2, yy + R(8), R(11), 'rgba(255,255,255,0.55)', 'center', false);
+      drawPicker(row.list, row.idx, yy + R(20), uiO.groups[row.key], PICK);
+      yy += ROW;
+    }
+
+    /* 「进入下一关」按钮 */
+    var btnY = py + ph - R(60);
+    var btnW = W - R(112), btnH = R(44);
+    var bx = R(56), by = btnY;
+    uiO.btn.x = bx; uiO.btn.y = by; uiO.btn.w = btnW; uiO.btn.h = btnH;
+    var pulseB = 0.5 + 0.5 * Math.sin(t * 3);
+    ctx.save();
+    ctx.globalAlpha = 0.5 + 0.3 * pulseB;
+    Core.drawGlow(W / 2, by + btnH / 2, R(110), COL.pink, 0.5);
+    ctx.restore();
+    var bg = ctx.createLinearGradient(bx, by, bx + btnW, by + btnH);
+    bg.addColorStop(0, Core.hexA(COL.pink, 0.9));
+    bg.addColorStop(1, Core.hexA('#c07fff', 0.9));
+    Core.panel(bx, by, btnW, btnH, R(22), bg, 'rgba(255,255,255,0.55)');
+    Core.drawText('▶  进入第 ' + (g.levelIdx + 2) + ' 关  ◀', W / 2, by + btnH / 2, R(16), '#ffffff', 'center');
+    ctx.restore();
+  };
+
+  /* 过关面板命中 */
+  Screens.clearHit = function (x, y) {
+    var keys = ['speed', 'density', 'path'];
+    for (var k = 0; k < keys.length; k++) {
+      var list = uiO.groups[keys[k]];
+      for (var i = 0; i < list.length; i++) {
+        var s = list[i];
+        if (!s) continue;
+        if (x >= s.x - R(4) && x <= s.x + s.w + R(4) && y >= s.y - R(6) && y <= s.y + s.h + R(6)) {
+          return { type: keys[k], index: i };
+        }
+      }
+    }
+    var bt = uiO.btn;
+    if (bt && bt.w && x >= bt.x - R(4) && x <= bt.x + bt.w + R(4) && y >= bt.y - R(6) && y <= bt.y + bt.h + R(6)) {
+      return 'next';
+    }
+    return null;
   };
 
   /* ---------- 结算 ---------- */
-  Screens.over = function (t, g) {
+  Screens.over = function (t, opt) {
     var ctx = Core.ctx, W = Core.W, H = Core.H;
+    var g = opt.g;
+    var speedIdx = opt.speedIdx, densityIdx = opt.densityIdx, pathIdx = opt.pathIdx;
     var rk = Config.getRank(g.score);
     var e = Core.clamp((Core.now() - g.overAt) / 0.55, 0, 1);
     var sc = 0.82 + 0.18 * Core.easeOutBack(e);
     ctx.save();
     ctx.globalAlpha = Core.easeOut(e);
-    ctx.translate(W / 2, H * 0.48);
+    ctx.translate(W / 2, H * 0.44);
     ctx.scale(sc, sc);
-    ctx.translate(-W / 2, -H * 0.48);
+    ctx.translate(-W / 2, -H * 0.44);
 
-    var pw = W - R(48), ph = R(392), px = R(24), py = H * 0.48 - ph / 2;
+    /* 面板扩高以容纳三档选择器 + 按钮:392 → 580 */
+    var pw = W - R(48), ph = R(580), px = R(24), py = H * 0.44 - ph / 2;
     Core.panel(px, py, pw, ph, R(24), 'rgba(24,10,52,0.88)', Core.hexA(g.win ? COL.gold : COL.pink, 0.6));
 
     if (g.win) Core.drawGlow(W / 2, py + R(44), R(80), COL.gold, 0.45);
@@ -369,12 +350,67 @@
       Core.drawTextGlow('★ 新 纪 录 ★', W / 2, py + R(352), R(17), COL.gold, 'rgba(255,190,60,0.5)', 'center');
       ctx.globalAlpha = 1;
     }
-    ctx.restore();
 
-    var blink = 0.5 + 0.5 * Math.sin(t * 4);
-    ctx.globalAlpha = 0.45 + 0.55 * blink;
-    Core.drawTextGlow('▶ 点击任意处 · 再来一局 ◀', W / 2, Math.min(H - R(30), py + ph + R(38)), R(18), COL.text, 'rgba(255,255,255,0.25)', 'center');
-    ctx.globalAlpha = 1;
+    /* ---------- 三档难度(嵌入面板内) ---------- */
+    var rows = [
+      {
+        key: 'speed', list: Config.SPEEDS, idx: speedIdx,
+        label: '速度 ' + Config.SPEEDS[speedIdx].name + ' ×' + Config.SPEEDS[speedIdx].mul.toFixed(2)
+      },
+      {
+        key: 'density', list: Config.DENSITY, idx: densityIdx,
+        label: '数量 ' + Config.DENSITY[densityIdx].name + ' · 单侧 ' + Config.DENSITY[densityIdx].lane
+      },
+      {
+        key: 'path', list: Config.PATHS, idx: pathIdx,
+        label: '轨迹 ' + Config.PATHS[pathIdx].name
+      }
+    ];
+    var yy = py + R(380);
+    var ROW = R(38), PICK = R(24);
+    for (var r = 0; r < rows.length; r++) {
+      var row = rows[r];
+      Core.drawText(row.label, W / 2, yy + R(8), R(11), 'rgba(255,255,255,0.55)', 'center', false);
+      drawPicker(row.list, row.idx, yy + R(20), uiO.groups[row.key], PICK);
+      yy += ROW;
+    }
+
+    /* 「再来一局」按钮 */
+    var btnY = py + ph - R(60);
+    var btnW = W - R(112), btnH = R(44);
+    var bx = R(56), by2 = btnY;
+    uiO.btn.x = bx; uiO.btn.y = by2; uiO.btn.w = btnW; uiO.btn.h = btnH;
+    var pulseB = 0.5 + 0.5 * Math.sin(t * 3);
+    ctx.save();
+    ctx.globalAlpha = 0.5 + 0.3 * pulseB;
+    Core.drawGlow(W / 2, by2 + btnH / 2, R(120), COL.pink, 0.5);
+    ctx.restore();
+    var bg = ctx.createLinearGradient(bx, by2, bx + btnW, by2 + btnH);
+    bg.addColorStop(0, Core.hexA(COL.pink, 0.9));
+    bg.addColorStop(1, Core.hexA('#c07fff', 0.9));
+    Core.panel(bx, by2, btnW, btnH, R(22), bg, 'rgba(255,255,255,0.55)');
+    Core.drawText('▶  再 来 一 局  ◀', W / 2, by2 + btnH / 2, R(16), '#ffffff', 'center');
+    ctx.restore();
+  };
+
+  /* 结算面板命中 */
+  Screens.overHit = function (x, y) {
+    var keys = ['speed', 'density', 'path'];
+    for (var k = 0; k < keys.length; k++) {
+      var list = uiO.groups[keys[k]];
+      for (var i = 0; i < list.length; i++) {
+        var s = list[i];
+        if (!s) continue;
+        if (x >= s.x - R(4) && x <= s.x + s.w + R(4) && y >= s.y - R(6) && y <= s.y + s.h + R(6)) {
+          return { type: keys[k], index: i };
+        }
+      }
+    }
+    var bt = uiO.btn;
+    if (bt && bt.w && x >= bt.x - R(4) && x <= bt.x + bt.w + R(4) && y >= bt.y - R(6) && y <= bt.y + bt.h + R(6)) {
+      return 'again';
+    }
+    return null;
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = Screens;

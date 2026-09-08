@@ -41,7 +41,7 @@ var soundOn = true;           // 音效开关
 var speedIdx = 0;             // 难度档位:下落速度
 var densityIdx = 0;           // 难度档位:心的数量
 var pathIdx = 0;              // 难度档位:移动轨迹
-var paused = false;
+var bgPaused = false;         // 微信切后台:暂停帧循环(不影响游戏中输入,仅 wx.onHide 触发)
 
 /* 读取持久化的档位下标;缺失或非法时回落到默认值 */
 function loadIdx(key, def, len) {
@@ -291,37 +291,58 @@ function tapAt(rawX, rawY) {
   }
 
   if (state === STATE.OVER) {
-    if (Core.now() - g.overAt > 0.55) { SFX.tap(); startNewRun(); }
-    return;
-  }
-
-  if (state === STATE.CLEAR) {
-    if (Core.now() - g.overAt > 0.5) { SFX.tap(); startLevel(g.levelIdx + 1); }
-    return;
-  }
-
-  if (state === STATE.PAUSED) {
-    var ph = Screens.pauseHit(x, y);
-    if (ph === 'resume') {
-      state = STATE.PLAY;
+    if (Core.now() - g.overAt < 0.55) return;
+    /* OVER 屏:点「再来一局」按钮→重开;点三档按钮→更新对应 idx 并持久化 */
+    var oh = Screens.overHit(x, y);
+    if (oh === 'again') {
       SFX.tap();
+      startNewRun();
       return;
     }
-    /* 暂停态可换三档难度,立即生效并持久化 */
-    if (ph && ph.type === 'speed') {
-      speedIdx = ph.index;
+    if (oh && oh.type === 'speed') {
+      speedIdx = oh.index;
       Core.store.set(Config.KEYS.speed, speedIdx);
       SFX.tap();
       return;
     }
-    if (ph && ph.type === 'density') {
-      densityIdx = ph.index;
+    if (oh && oh.type === 'density') {
+      densityIdx = oh.index;
       Core.store.set(Config.KEYS.density, densityIdx);
       SFX.tap();
       return;
     }
-    if (ph && ph.type === 'path') {
-      pathIdx = ph.index;
+    if (oh && oh.type === 'path') {
+      pathIdx = oh.index;
+      Core.store.set(Config.KEYS.path, pathIdx);
+      SFX.tap();
+      return;
+    }
+    return;
+  }
+
+  if (state === STATE.CLEAR) {
+    if (Core.now() - g.overAt < 0.5) return;
+    /* CLEAR 屏:点「进入下一关」→进下一关;点三档按钮→更新对应 idx 并持久化 */
+    var ch = Screens.clearHit(x, y);
+    if (ch === 'next') {
+      SFX.tap();
+      startLevel(g.levelIdx + 1);
+      return;
+    }
+    if (ch && ch.type === 'speed') {
+      speedIdx = ch.index;
+      Core.store.set(Config.KEYS.speed, speedIdx);
+      SFX.tap();
+      return;
+    }
+    if (ch && ch.type === 'density') {
+      densityIdx = ch.index;
+      Core.store.set(Config.KEYS.density, densityIdx);
+      SFX.tap();
+      return;
+    }
+    if (ch && ch.type === 'path') {
+      pathIdx = ch.index;
       Core.store.set(Config.KEYS.path, pathIdx);
       SFX.tap();
       return;
@@ -330,13 +351,6 @@ function tapAt(rawX, rawY) {
   }
 
   if (state !== STATE.PLAY || !g) return;
-
-  /* 暂停按钮:游戏中点右上角 ‖ 进入暂停面板 */
-  if (HUD.pauseHit(x, y)) {
-    state = STATE.PAUSED;
-    SFX.tap();
-    return;
-  }
 
   /* 命中判定:取距离最近且在判定半径内的掉落物 */
   var bestI = -1, bestD = R(Config.CATCH_R);
@@ -383,7 +397,7 @@ function loop() {
   var dt = lastT ? clamp((n - lastT) / 1000, 0, 0.05) : 0.016;
   lastT = n;
   Core.setNow(n / 1000);
-  if (!paused) {
+  if (!bgPaused) {
     update(dt);
     render();
   }
@@ -461,7 +475,6 @@ function render() {
 
   if (state === STATE.MENU) renderMenu(t);
   else if (state === STATE.PLAY) renderPlay(t);
-  else if (state === STATE.PAUSED) renderPaused(t);
   else if (state === STATE.CLEAR) renderClear(t);
   else renderOver(t);
 
@@ -510,7 +523,6 @@ function renderPlay(t) {
   for (var i = 0; i < g.items.length; i++) g.items[i].draw(t);
   FX.draw();
   HUD.draw(g, t);
-  HUD.drawPause(t);
 
   /* 每关开局提示 */
   if (g.hintT > 0) {
@@ -526,28 +538,18 @@ function renderPlay(t) {
   }
 }
 
-function renderPaused(t) {
-  /* 先把游戏画面画出来,再叠半透明遮罩 + 三档选择器 + 继续按钮 */
-  Background.drawAmbient(t);
-  Background.drawGround(t, g);
-  for (var i = 0; i < g.items.length; i++) g.items[i].draw(t);
-  FX.draw();
-  HUD.draw(g, t);
-  HUD.drawPause(t);
-  Screens.paused(t, {
-    speedIdx: speedIdx,
-    densityIdx: densityIdx,
-    pathIdx: pathIdx
-  });
-}
-
 function renderClear(t) {
   Background.drawAmbient(t);
   var ctx = Core.ctx;
   ctx.fillStyle = 'rgba(10,5,25,0.55)';
   ctx.fillRect(0, 0, Core.W, Core.H);
   FX.draw();
-  Screens.clear(t, g);
+  Screens.clear(t, {
+    g: g,
+    speedIdx: speedIdx,
+    densityIdx: densityIdx,
+    pathIdx: pathIdx
+  });
 }
 
 function renderOver(t) {
@@ -556,15 +558,20 @@ function renderOver(t) {
   ctx.fillStyle = 'rgba(10,5,25,0.6)';
   ctx.fillRect(0, 0, Core.W, Core.H);
   FX.draw();
-  Screens.over(t, g);
+  Screens.over(t, {
+    g: g,
+    speedIdx: speedIdx,
+    densityIdx: densityIdx,
+    pathIdx: pathIdx
+  });
 }
 
 /* ============================================================
  *  生命周期:切后台自动暂停
  * ============================================================ */
 if (typeof wx !== 'undefined' && wx.onShow) {
-  wx.onShow(function () { paused = false; lastT = 0; });
-  wx.onHide(function () { paused = true; });
+  wx.onShow(function () { bgPaused = false; lastT = 0; });
+  wx.onHide(function () { bgPaused = true; });
 }
 
 boot();

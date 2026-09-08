@@ -7,7 +7,7 @@
   'use strict';
 
   /* ---------- 状态机 ---------- */
-  var STATE = { MENU: 0, PLAY: 1, OVER: 2, CLEAR: 3, PAUSED: 4 };
+  var STATE = { MENU: 0, PLAY: 1, OVER: 2, CLEAR: 3 };
 
   /* ---------- 爱心与判定 ---------- */
   var MAX_LOVE = 5;              // 爱心上限
