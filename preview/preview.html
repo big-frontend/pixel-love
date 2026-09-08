@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="K545RRHOGgvvdCql53Lo1h">
+<head data-page-node-id="tt3ruHwf8ttD2rML7Q3T3d">
+<meta charset="utf-8" data-page-node-id="OZLE5btyARxtEYGq9rrNmu">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" data-page-node-id="ZUH1uJf8hKeaCyVcNDPBiu">
+<title>心动像素 Pixel Heart · 网页试玩</title>
+<style>
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: #070312;
+    overflow: hidden;
+    font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  #wrap {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  canvas#game {
+    display: block;
+    background: #1a0f3c;
+    image-rendering: pixelated;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    box-shadow: 0 0 60px rgba(255, 95, 143, 0.18);
+    border-radius: 6px;
+  }
+  #note {
+    position: fixed;
+    left: 0; right: 0; bottom: 6px;
+    text-align: center;
+    color: rgba(255,255,255,0.38);
+    font-size: 12px;
+    pointer-events: none;
+    letter-spacing: 1px;
+  }
+</style>
+</head>
+<body data-page-node-id="eXddk07blGyDvIvRLXYM9S">
+<div id="wrap" data-page-node-id="pWsFHD2csZtuPdU0N9uJTL"><canvas id="game" data-page-node-id="XiWNwe0ROoZnxjlFvRR4sT"></canvas></div>
+<div id="note" data-page-node-id="vtyNJkp2FEMrA1Nd0bSjTd">浏览器试玩预览 · 菜单可调难度:下落速度 / 心的数量 / 移动轨迹(各 4 档)· 手机体验:一人守左、一人守右,同时点击操作 · 首次点击后开启 8-bit 音效(菜单右上角可开关) · 发布版请在微信开发者工具中打开 pixel-love 工程</div>
+<script src="wx-shim.js"></script>
+<!-- 各模块按依赖顺序引入(微信小游戏里由 require() 完成,浏览器靠 shim 桥接) -->
+<script src="../src/core.js"></script>
+<script src="../src/config.js"></script>
+<script src="../src/audio.js"></script>
+<script src="../src/sprites.js"></script>
+<script src="../src/fx.js"></script>
+<script src="../src/background.js"></script>
+<script src="../src/entities.js"></script>
+<script src="../src/hud.js"></script>
+<script src="../src/screens.js"></script>
+<script src="../game.js"></script>
+</body>
+</html>
