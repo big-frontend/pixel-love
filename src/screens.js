@@ -15,6 +15,7 @@
   /* 菜单交互区域(绘制时更新) */
   var ui = {
     sound: { x: 0, y: 0, r: 0 },
+    share: { x: 0, y: 0, r: 0 },
     start: { x: 0, y: 0, w: 0, h: 0 },
     groups: { speed: [], density: [], path: [] }
   };
@@ -52,6 +53,38 @@
     Core.drawText(soundOn ? '音效开' : '音效关', x - R(2), y + r + R(12), R(10), 'rgba(255,255,255,0.4)', 'center', false);
   }
 
+  /* 菜单右上角分享按钮 —— 调起 wx.shareAppMessage */
+  function drawShareBtn() {
+    var r = R(17);
+    var x = R(28), y = Core.SAFE_TOP + R(24);
+    ui.share.x = x; ui.share.y = y; ui.share.r = r + R(8);
+    var ctx = Core.ctx;
+    ctx.fillStyle = 'rgba(255,255,255,0.10)';
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill();
+    ctx.strokeStyle = Core.hexA(COL.pinkHot, 0.55);
+    ctx.lineWidth = Math.max(1, R(1.5));
+    ctx.stroke();
+    /* 两人 + 之间的爱心:简化成两个小圆 + 中间一个心 */
+    var c = Math.max(2, R(2));
+    ctx.fillStyle = '#ffffff';
+    /* 左边人(头) */
+    ctx.beginPath(); ctx.arc(x - R(7), y - R(1), c, 0, 6.2832); ctx.fill();
+    /* 左边人(肩) */
+    ctx.fillRect(x - R(10), y + R(2), R(6), R(1.6));
+    /* 右边人(头) */
+    ctx.beginPath(); ctx.arc(x + R(7), y - R(1), c, 0, 6.2832); ctx.fill();
+    /* 右边人(肩) */
+    ctx.fillRect(x + R(4), y + R(2), R(6), R(1.6));
+    /* 中间的小爱心 */
+    ctx.fillStyle = COL.pinkHot;
+    var hx = x, hy = y + R(1), hs = R(1.6);
+    ctx.fillRect(hx - hs * 2, hy - hs, hs * 1.4, hs * 0.9);   /* 左瓣 */
+    ctx.fillRect(hx + hs * 0.6, hy - hs, hs * 1.4, hs * 0.9);  /* 右瓣 */
+    ctx.fillRect(hx - hs * 0.5, hy - hs * 0.1, hs, hs * 0.9);  /* 中缝 */
+    ctx.fillRect(hx - hs, hy + hs * 0.5, hs * 2, hs);         /* 底部尖 */
+    Core.drawText('邀请', x, y + r + R(12), R(10), 'rgba(255,255,255,0.4)', 'center', false);
+  }
+
   /* 通用档位选择器:把按钮矩形记进 store,供 menuHit 命中测试 */
   function drawPicker(list, idx, y, store, h) {
     var ctx = Core.ctx, W = Core.W;
@@ -82,6 +115,7 @@
     var speedIdx = opt.speedIdx, densityIdx = opt.densityIdx, pathIdx = opt.pathIdx;
 
     drawSoundBtn(t, soundOn);
+    drawShareBtn();
 
     /* ---------- 自适应布局 ----------
      * 先把内容按理想间距量一遍,屏幕不够高就整体压缩间距;
@@ -186,10 +220,14 @@
     Core.drawText('▶  开 始 游 戏  ◀', W / 2, by + btnH / 2, R(19), '#ffffff', 'center');
   };
 
-  /* 菜单点击命中:返回 'sound' | {type:'speed'|'density'|'path', index} | 'start' | null(其余区域不响应) */
+  /* 菜单点击命中:返回 'sound' | 'share' | {type:'speed'|'density'|'path', index} | 'start' | null(其余区域不响应) */
   Screens.menuHit = function (x, y) {
+    /* 音效按钮 */
     var dx = x - ui.sound.x, dy = y - ui.sound.y;
     if (dx * dx + dy * dy < ui.sound.r * ui.sound.r) return 'sound';
+    /* 分享按钮 */
+    dx = x - ui.share.x; dy = y - ui.share.y;
+    if (dx * dx + dy * dy < ui.share.r * ui.share.r) return 'share';
     var keys = ['speed', 'density', 'path'];
     for (var k = 0; k < keys.length; k++) {
       var list = ui.groups[keys[k]];

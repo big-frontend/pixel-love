@@ -73,6 +73,22 @@ function boot() {
   Background.init(Config.LEVELS[0].theme);
   FX.reset();
   bindInput();
+  /* 被动分享:右上角胶囊点开的「转发给朋友」会调此回调。
+     根据当前对局动态生成标题:菜单/游戏中/通关/失败 各自措辞不同 */
+  if (typeof wx !== 'undefined' && wx.onShareAppMessage) {
+    wx.onShareAppMessage(function () {
+      if (state === STATE.PLAY) {
+        return { title: '「心动像素」第 ' + (g.levelIdx + 1) + ' 关进行中 · 一起来接心心!' };
+      }
+      if (state === STATE.CLEAR) {
+        return { title: '「心动像素」第 ' + (g.levelIdx + 1) + ' 关通关 · 你也来试试?' };
+      }
+      if (state === STATE.OVER) {
+        return { title: '「心动像素」我得了 ' + g.score + ' 分 · 你能超过我吗?' };
+      }
+      return { title: '「心动像素」双人同屏 · 一起守护小心心!' };
+    });
+  }
   loop();
 }
 
@@ -262,6 +278,20 @@ function tapAt(rawX, rawY) {
     if (hit === 'sound') {
       soundOn = SFX.toggle();
       SFX.tap();
+      return;
+    }
+    /* 分享:调 wx.shareAppMessage(浏览器下走 shim 的 mock 面板,真机自动调起原生面板) */
+    if (hit === 'share') {
+      wx.shareAppMessage({
+        title: '「心动像素」双人同屏 · 一起守护小心心!',
+        success: function () { /* 用户已分享,无后续动作 */ },
+        fail: function (r) {
+          if (r && r.errMsg && r.errMsg.indexOf('cancel') < 0) {
+            /* 失败但非用户取消,提示一下 */
+            FX.pop(Core.W / 2, Core.H * 0.5, '分享失败,稍后再试', COL.pink, R(16));
+          }
+        }
+      });
       return;
     }
     /* 三个难度档位的选择器;点空白处或开始按钮才开局 */

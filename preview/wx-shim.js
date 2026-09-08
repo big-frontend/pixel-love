@@ -106,6 +106,59 @@
     } catch (e) { /* ignore */ }
   }
 
+  /* ---------- 分享(mock): 弹一个简单的分享卡片弹窗 ---------- */
+  /* 真机下微信小游戏会自动调起原生 shareAppMessage,所以这里的 mock 只用于浏览器试玩 */
+  var shareCallback = null;          // wx.onShareAppMessage 注册的回调
+  function buildSharePanel(opt) {
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;z-index:9999;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;';
+    var card = document.createElement('div');
+    card.style.cssText = 'background:#1a0a3a;color:#fff;border-radius:18px;padding:22px 24px;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.6);text-align:center;border:1px solid rgba(255,255,255,0.15);';
+    var t = document.createElement('div');
+    t.style.cssText = 'font-size:16px;font-weight:700;color:#ff5a8a;margin-bottom:8px;line-height:1.4;';
+    t.textContent = '分享给好友一起玩';
+    var titleEl = document.createElement('div');
+    titleEl.style.cssText = 'font-size:15px;line-height:1.5;color:#fff;margin:8px 0 16px;padding:12px;background:rgba(255,255,255,0.08);border-radius:10px;word-break:break-word;';
+    titleEl.textContent = opt && opt.title ? opt.title : '心动像素';
+    var hint = document.createElement('div');
+    hint.style.cssText = 'font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:18px;';
+    hint.textContent = '真机预览:微信会自动调起分享面板';
+    var btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;gap:12px;';
+    var mkBtn = function (text, primary, cb) {
+      var b = document.createElement('button');
+      b.textContent = text;
+      b.style.cssText = 'flex:1;padding:10px 0;border-radius:10px;border:none;font-size:14px;font-weight:600;cursor:pointer;' +
+        (primary
+          ? 'background:linear-gradient(135deg,#ff5a8a,#c07fff);color:#fff;'
+          : 'background:rgba(255,255,255,0.1);color:#fff;');
+      b.onclick = function () { cb(); document.body.removeChild(overlay); };
+      return b;
+    };
+    btns.appendChild(mkBtn('取消', false, function () {
+      if (opt && opt.fail) opt.fail({ errMsg: 'shareAppMessage: cancel' });
+      if (opt && opt.complete) opt.complete({ errMsg: 'shareAppMessage: cancel' });
+    }));
+    btns.appendChild(mkBtn('分享', true, function () {
+      if (opt && opt.success) opt.success({ errMsg: 'shareAppMessage:ok' });
+      if (opt && opt.complete) opt.complete({ errMsg: 'shareAppMessage:ok' });
+    }));
+    card.appendChild(t);
+    card.appendChild(titleEl);
+    card.appendChild(hint);
+    card.appendChild(btns);
+    overlay.appendChild(card);
+    /* 点击遮罩外部=取消 */
+    overlay.addEventListener('click', function (ev) {
+      if (ev.target === overlay) {
+        if (opt && opt.fail) opt.fail({ errMsg: 'shareAppMessage: cancel' });
+        if (opt && opt.complete) opt.complete({ errMsg: 'shareAppMessage: cancel' });
+        document.body.removeChild(overlay);
+      }
+    });
+    return overlay;
+  }
+
   /* ---------- 暴露 wx 全局对象 ---------- */
   window.wx = {
     createCanvas: function () {
@@ -157,6 +210,16 @@
     },
     setStorageSync: function (k, v) {
       try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* ignore */ }
+    },
+    /* 主动分享: 真机会调起原生分享面板; web 端弹 mock 卡片 */
+    shareAppMessage: function (opt) {
+      opt = opt || {};
+      var panel = buildSharePanel(opt);
+      document.body.appendChild(panel);
+    },
+    /* 监听右上角胶囊点开后的被动分享 */
+    onShareAppMessage: function (cb) {
+      shareCallback = cb;
     }
   };
 
