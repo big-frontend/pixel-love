@@ -23,20 +23,21 @@
    *  ③ 轨迹 PATHS    —— 横向移动方式(amp/freq/wob 见 entities.js)
    * ============================================================ */
   var SPEEDS = [
-    { name: '轻松', mul: 0.95, spawnMul: 1.10 },
-    { name: '标准', mul: 1.30, spawnMul: 1.00 },
     { name: '刺激', mul: 1.75, spawnMul: 0.92 },
-    { name: '疯狂', mul: 2.30, spawnMul: 0.85 }
+    { name: '紧绷', mul: 2.10, spawnMul: 0.85 },
+    { name: '狂飙', mul: 2.50, spawnMul: 0.78 },
+    { name: '极限', mul: 3.00, spawnMul: 0.70 },
+    { name: '神话', mul: 3.60, spawnMul: 0.62 }
   ];
-  var DEFAULT_SPEED = 1;         // 默认「标准」
+  var DEFAULT_SPEED = 0;         // 默认「刺激」
 
   var DENSITY = [
-    { name: '稀疏', mul: 1.30, lane: 3 },
-    { name: '适中', mul: 1.00, lane: 4 },
-    { name: '密集', mul: 0.78, lane: 5 },
-    { name: '爆满', mul: 0.62, lane: 6 }
+    { name: '较密', mul: 1.00, lane: 6 },
+    { name: '超密', mul: 0.80, lane: 9 },
+    { name: '满屏', mul: 0.62, lane: 12 },
+    { name: '极限', mul: 0.48, lane: 15 }
   ];
-  var DEFAULT_DENSITY = 1;       // 默认「适中」
+  var DEFAULT_DENSITY = 0;       // 默认「较密」
 
   var PATHS = [
     { name: '直落', desc: '垂直落下,好预判',   amp: 0.0, freq: 3.0, wob: 0.0 },

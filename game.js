@@ -57,6 +57,15 @@ function boot() {
   Core.boot();
   best = Core.store.get(Config.KEYS.best, 0) || 0;
   soundOn = SFX.isOn();
+  /* v2 起 SPEEDS/DENSITY 重新设计(刺激为起点、6/9/12/15 数量递进),
+     旧 idx 已经无法对应新档位名称,这里把旧 store 清掉用新默认值 */
+  var cfgVer = parseInt(Core.store.get('pixel_heart_cfgver', '0'), 10) || 0;
+  if (cfgVer < 2) {
+    Core.store.set(Config.KEYS.speed, null);
+    Core.store.set(Config.KEYS.density, null);
+    Core.store.set(Config.KEYS.path, null);
+    Core.store.set('pixel_heart_cfgver', 2);
+  }
   speedIdx = loadIdx(Config.KEYS.speed, Config.DEFAULT_SPEED, Config.SPEEDS.length);
   densityIdx = loadIdx(Config.KEYS.density, Config.DEFAULT_DENSITY, Config.DENSITY.length);
   pathIdx = loadIdx(Config.KEYS.path, Config.DEFAULT_PATH, Config.PATHS.length);
