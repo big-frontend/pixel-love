@@ -19,6 +19,12 @@
     groups: { speed: [], density: [], path: [] }
   };
 
+  /* 暂停面板交互区 */
+  var uiP = {
+    resume: { x: 0, y: 0, w: 0, h: 0 },
+    groups: { speed: [], density: [], path: [] }
+  };
+
   /* ---------- 小工具 ---------- */
   function drawSoundBtn(t, soundOn) {
     var x = Core.W - R(28), y = Core.SAFE_TOP + R(24), r = R(17);
@@ -196,6 +202,88 @@
     var st = ui.start;
     if (st && x >= st.x - R(4) && x <= st.x + st.w + R(4) && y >= st.y - R(6) && y <= st.y + st.h + R(6)) {
       return 'start';
+    }
+    return null;
+  };
+
+  /* ---------- 暂停面板 ---------- */
+  Screens.paused = function (t, opt) {
+    var W = Core.W, H = Core.H;
+    var speedIdx = opt.speedIdx, densityIdx = opt.densityIdx, pathIdx = opt.pathIdx;
+
+    /* 半透明黑色遮罩(让背后游戏画面微微透出,但很暗) */
+    var ctx = Core.ctx;
+    ctx.fillStyle = 'rgba(10,4,26,0.78)';
+    ctx.fillRect(0, 0, W, H);
+
+    /* 标题 */
+    var head = R(56), ROW = R(54), PICK = R(34), BTN = R(52);
+    var top = H * 0.14, bottom = H - R(40);
+    var avail = bottom - top;
+    var total = head + 3 * (ROW + R(4)) + R(16) + PICK + R(24) + BTN;
+    var u = Math.min(1, avail / total);
+    var y = top + Math.max(0, (avail - total * u) / 2);
+
+    Core.drawTextGlow('已 暂 停', W / 2, y + head * u * 0.55, R(30), COL.text,
+      Core.hexA(COL.pink, 0.55), 'center');
+
+    /* 三档难度(沿用菜单的 drawPicker,只是位置从 y 开始) */
+    y += head * u + R(6);
+    var rows = [
+      {
+        key: 'speed', list: Config.SPEEDS, idx: speedIdx,
+        label: '下落速度 · 当前「' + Config.SPEEDS[speedIdx].name + ' ×' + Config.SPEEDS[speedIdx].mul.toFixed(2) + '」'
+      },
+      {
+        key: 'density', list: Config.DENSITY, idx: densityIdx,
+        label: '心的数量 · 当前「' + Config.DENSITY[densityIdx].name + '」单侧最多 ' + Config.DENSITY[densityIdx].lane + ' 个'
+      },
+      {
+        key: 'path', list: Config.PATHS, idx: pathIdx,
+        label: '移动轨迹 · 当前「' + Config.PATHS[pathIdx].name + '」' + Config.PATHS[pathIdx].desc
+      }
+    ];
+    for (var r = 0; r < rows.length; r++) {
+      var row = rows[r];
+      Core.drawText(row.label, W / 2, y, R(12), 'rgba(255,255,255,0.6)', 'center', false);
+      drawPicker(row.list, row.idx, y + R(18) * u, uiP.groups[row.key], PICK * u);
+      y += ROW * u;
+    }
+    y += (R(18) + PICK) * u - ROW * u;
+
+    /* 继续游戏按钮 */
+    y += R(28) * u;
+    var btnW = W - R(120), btnH = BTN * u;
+    var bx = R(60), by = y;
+    uiP.resume.x = bx; uiP.resume.y = by; uiP.resume.w = btnW; uiP.resume.h = btnH;
+    var pulseB = 0.5 + 0.5 * Math.sin(t * 3);
+    ctx.save();
+    ctx.globalAlpha = 0.5 + 0.3 * pulseB;
+    Core.drawGlow(W / 2, by + btnH / 2, R(110), COL.pink, 0.5);
+    ctx.restore();
+    var bg = ctx.createLinearGradient(bx, by, bx + btnW, by + btnH);
+    bg.addColorStop(0, Core.hexA(COL.pink, 0.9));
+    bg.addColorStop(1, Core.hexA('#c07fff', 0.9));
+    Core.panel(bx, by, btnW, btnH, R(24), bg, 'rgba(255,255,255,0.55)');
+    Core.drawText('▶  继 续 游 戏  ◀', W / 2, by + btnH / 2, R(19), '#ffffff', 'center');
+  };
+
+  /* 暂停面板命中:返回 'resume' | {type:'speed'|'density'|'path', index} | null */
+  Screens.pauseHit = function (x, y) {
+    var keys = ['speed', 'density', 'path'];
+    for (var k = 0; k < keys.length; k++) {
+      var list = uiP.groups[keys[k]];
+      for (var i = 0; i < list.length; i++) {
+        var s = list[i];
+        if (!s) continue;
+        if (x >= s.x - R(4) && x <= s.x + s.w + R(4) && y >= s.y - R(6) && y <= s.y + s.h + R(6)) {
+          return { type: keys[k], index: i };
+        }
+      }
+    }
+    var rs = uiP.resume;
+    if (rs && x >= rs.x - R(4) && x <= rs.x + rs.w + R(4) && y >= rs.y - R(6) && y <= rs.y + rs.h + R(6)) {
+      return 'resume';
     }
     return null;
   };

@@ -291,7 +291,43 @@ function tapAt(rawX, rawY) {
     return;
   }
 
+  if (state === STATE.PAUSED) {
+    var ph = Screens.pauseHit(x, y);
+    if (ph === 'resume') {
+      state = STATE.PLAY;
+      SFX.tap();
+      return;
+    }
+    /* 暂停态可换三档难度,立即生效并持久化 */
+    if (ph && ph.type === 'speed') {
+      speedIdx = ph.index;
+      Core.store.set(Config.KEYS.speed, speedIdx);
+      SFX.tap();
+      return;
+    }
+    if (ph && ph.type === 'density') {
+      densityIdx = ph.index;
+      Core.store.set(Config.KEYS.density, densityIdx);
+      SFX.tap();
+      return;
+    }
+    if (ph && ph.type === 'path') {
+      pathIdx = ph.index;
+      Core.store.set(Config.KEYS.path, pathIdx);
+      SFX.tap();
+      return;
+    }
+    return;
+  }
+
   if (state !== STATE.PLAY || !g) return;
+
+  /* 暂停按钮:游戏中点右上角 ‖ 进入暂停面板 */
+  if (HUD.pauseHit(x, y)) {
+    state = STATE.PAUSED;
+    SFX.tap();
+    return;
+  }
 
   /* 命中判定:取距离最近且在判定半径内的掉落物 */
   var bestI = -1, bestD = R(Config.CATCH_R);
@@ -416,6 +452,7 @@ function render() {
 
   if (state === STATE.MENU) renderMenu(t);
   else if (state === STATE.PLAY) renderPlay(t);
+  else if (state === STATE.PAUSED) renderPaused(t);
   else if (state === STATE.CLEAR) renderClear(t);
   else renderOver(t);
 
@@ -464,6 +501,7 @@ function renderPlay(t) {
   for (var i = 0; i < g.items.length; i++) g.items[i].draw(t);
   FX.draw();
   HUD.draw(g, t);
+  HUD.drawPause(t);
 
   /* 每关开局提示 */
   if (g.hintT > 0) {
@@ -477,6 +515,21 @@ function renderPlay(t) {
     Core.drawText(g.lev.hint, Core.W / 2, Core.H * 0.5, R(17), Core.COL.white, 'center');
     ctx.globalAlpha = 1;
   }
+}
+
+function renderPaused(t) {
+  /* 先把游戏画面画出来,再叠半透明遮罩 + 三档选择器 + 继续按钮 */
+  Background.drawAmbient(t);
+  Background.drawGround(t, g);
+  for (var i = 0; i < g.items.length; i++) g.items[i].draw(t);
+  FX.draw();
+  HUD.draw(g, t);
+  HUD.drawPause(t);
+  Screens.paused(t, {
+    speedIdx: speedIdx,
+    densityIdx: densityIdx,
+    pathIdx: pathIdx
+  });
 }
 
 function renderClear(t) {

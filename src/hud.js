@@ -10,6 +10,11 @@
 
   var HUD = {};
 
+  /* 交互区(暂停按钮) */
+  HUD.ui = {
+    pause: { x: 0, y: 0, r: 0 }
+  };
+
   HUD.draw = function (g, t) {
     var ctx = Core.ctx, W = Core.W;
     var y = Core.SAFE_TOP + R(16);
@@ -82,6 +87,32 @@
       Core.drawTextGlow('❤ ' + g.combo + ' 连击', 0, 0, R(22), ccol, 'rgba(30,8,50,0.55)', 'center');
       ctx.restore();
     }
+  };
+
+  /* 暂停按钮(右上角,PLAY 态由 renderPlay 调用) */
+  HUD.drawPause = function (t) {
+    var ctx = Core.ctx, W = Core.W;
+    var r = R(14);
+    var x = W - R(28), y = Core.SAFE_TOP + R(24);
+    HUD.ui.pause.x = x; HUD.ui.pause.y = y; HUD.ui.pause.r = r + R(8);
+    /* 背衬圆 */
+    ctx.fillStyle = 'rgba(10,4,26,0.55)';
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+    ctx.lineWidth = Math.max(1, R(1.5));
+    ctx.stroke();
+    /* 两条竖条 ‖ */
+    var bw = R(3), bh = R(11), gap = R(3);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x - bw - gap / 2, y - bh / 2, bw, bh);
+    ctx.fillRect(x + gap / 2, y - bh / 2, bw, bh);
+  };
+
+  HUD.pauseHit = function (x, y) {
+    var p = HUD.ui.pause;
+    if (!p.r) return false;
+    var dx = x - p.x, dy = y - p.y;
+    return dx * dx + dy * dy < p.r * p.r;
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = HUD;
